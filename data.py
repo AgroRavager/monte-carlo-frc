@@ -1,8 +1,12 @@
 import pandas as pd
 import random
 
-def filter_measures(measures, last_match = None):
-    measures = measures[measures.match.str[2:].astype(int)<=int(last_match[2:])].copy()
+def filter_measures(measures, first_match = None, last_match = None):
+    measures = measures[measures.match.str.startswith('qm')].copy()
+    if last_match is not None:
+        measures = measures[measures.match.str[2:].astype(int)<=int(last_match[2:])].copy()
+    if first_match is not None:
+        measures = measures[measures.match.str[2:].astype(int)>=int(first_match[2:])].copy()
     return measures
 
 def filter_matches(matches, first_match = None, last_match = None):
@@ -20,8 +24,7 @@ def get_taxi_sums(measures):
         .assign(measure1 = lambda df: df.measure1.map(booldict))
         .groupby("team_number")
         .agg({"measure1": 'sum'})
-        .assign(taxi = lambda df: df.measure1)
-        .drop(columns = "measure1"))
+        .rename(columns = {'measure1':'taxi'}))
     return taxi
 
 def get_counts(measures):
@@ -29,13 +32,13 @@ def get_counts(measures):
         measures[(measures['measure_type']=='count')
         &(measures['task'].isin(['upper','lower','penalty_count']))]
         .copy()
-        .assign(means=lambda df: df.measure1.astype('int'))
+        .assign(sums=lambda df: df.measure1.astype('int'))
         .groupby(['team_number','phase','task'])
-        .agg({'means':'sum'})
+        .agg({'sums':'sum'})
         .reset_index(level=[1,2])
         .assign(task=lambda df: df.phase+'_'+df.task)
         .drop(columns='phase')
-        .pivot(columns='task',values='means'))
+        .pivot(columns='task',values='sums'))
     return counts
 
 def get_hangar_totals(measures):
